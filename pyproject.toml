@@ -1,0 +1,13 @@
+[project]
+name = "acme-deploy"
+version = "0.1.0"
+description = "ACME (Let's Encrypt) 证书自动续期 + 可插拔部署管道（云函数友好）"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "acme>=5.7.0",
+    "cryptography>=50.0.0",
+    "dnspython>=2.8.0",
+    "josepy>=2.2.0",
+    "requests>=2.34.2",
+]
