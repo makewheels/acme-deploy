@@ -1,5 +1,6 @@
 import logging
 import os
+import tempfile
 
 from renewer import acme
 from renewer import deploy as deployers
@@ -16,9 +17,13 @@ def run():
     cfg = Config()
     dns = dns_providers.create(cfg.dns_provider, cfg)
     target = deployers.create(cfg.deploy_target, cfg)
-    st = State(cfg.state_dir)
 
     sync = None
+    if cfg.state_oss_uri:
+        st = State(tempfile.mkdtemp(prefix="acme-deploy-state-"))
+    else:
+        st = State(cfg.state_dir)
+
     if cfg.state_oss_uri:
         sb, sp = parse_state_oss_uri(cfg.state_oss_uri)
         oss = OssClient(cfg.access_key_id, cfg.access_key_secret, cfg.security_token)

@@ -19,6 +19,27 @@ wheels = [
 ]
 
 [[package]]
+name = "acme-deploy"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "acme" },
+    { name = "cryptography" },
+    { name = "dnspython" },
+    { name = "josepy" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "acme", specifier = ">=5.7.0" },
+    { name = "cryptography", specifier = ">=50.0.0" },
+    { name = "dnspython", specifier = ">=2.8.0" },
+    { name = "josepy", specifier = ">=2.2.0" },
+    { name = "requests", specifier = ">=2.34.2" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.7.22"
 source = { registry = "https://pypi.org/simple" }
@@ -199,27 +220,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7f/ad/6f520aee9cc9618d33430380741e9ef859b2c560b1e7915e755c084f6bc0/josepy-2.2.0.tar.gz", hash = "sha256:74c033151337c854f83efe5305a291686cef723b4b970c43cfe7270cf4a677a9", size = 56500, upload-time = "2025-10-14T14:54:42.108Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f8/b2/b5caed897fbb1cc286c62c01feca977e08d99a17230ff3055b9a98eccf1d/josepy-2.2.0-py3-none-any.whl", hash = "sha256:63e9dd116d4078778c25ca88f880cc5d95f1cab0099bebe3a34c2e299f65d10b", size = 29211, upload-time = "2025-10-14T14:54:41.144Z" },
-]
-
-[[package]]
-name = "oss-cert-renewer"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "acme" },
-    { name = "cryptography" },
-    { name = "dnspython" },
-    { name = "josepy" },
-    { name = "requests" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "acme", specifier = ">=5.7.0" },
-    { name = "cryptography", specifier = ">=50.0.0" },
-    { name = "dnspython", specifier = ">=2.8.0" },
-    { name = "josepy", specifier = ">=2.2.0" },
-    { name = "requests", specifier = ">=2.34.2" },
 ]
 
 [[package]]
