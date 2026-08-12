@@ -1,4 +1,5 @@
 import logging
+import os
 
 from renewer import acme
 from renewer import deploy as deployers
@@ -73,6 +74,11 @@ def run():
 
 
 def handler(event, context):
+    creds = getattr(context, "credentials", None)
+    if creds and not os.environ.get("ALIBABA_CLOUD_ACCESS_KEY_ID"):
+        os.environ["ALIBABA_CLOUD_ACCESS_KEY_ID"] = creds.access_key_id
+        os.environ["ALIBABA_CLOUD_ACCESS_KEY_SECRET"] = creds.access_key_secret
+        os.environ["ALIBABA_CLOUD_SECURITY_TOKEN"] = creds.security_token
     run()
     return "ok"
 
