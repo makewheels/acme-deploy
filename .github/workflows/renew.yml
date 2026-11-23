@@ -1,0 +1,74 @@
+name: Renew TLS certificate
+
+on:
+  schedule:
+    - cron: '37 3 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: certificate-renewal
+  cancel-in-progress: false
+
+jobs:
+  renew:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: false
+      - name: Check and renew certificate
+        shell: bash
+        env:
+          ALIBABA_CLOUD_ACCESS_KEY_ID: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+          ALIBABA_CLOUD_SECURITY_TOKEN: ${{ secrets.ALIBABA_CLOUD_SECURITY_TOKEN }}
+          CERT_DOMAIN: ${{ secrets.CERT_DOMAIN }}
+          LE_EMAIL: ${{ secrets.LE_EMAIL }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+          OSS_REGION: ${{ vars.OSS_REGION }}
+          STATE_OSS_URI: ${{ secrets.STATE_OSS_URI }}
+        run: |
+          for name in ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET CERT_DOMAIN LE_EMAIL OSS_BUCKET STATE_OSS_URI; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing Actions secret: $name"
+              exit 1
+            fi
+          done
+          uv run --locked python handler.py
+
+  record:
+    needs: renew
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Record successful check
+        shell: bash
+        run: |
+          ref=refs/heads/renewal-status
+          if git ls-remote --exit-code origin "$ref"; then
+            git fetch --no-tags --depth=1 origin "$ref"
+            git switch -C renewal-status FETCH_HEAD
+          elif [[ $? -eq 2 ]]; then
+            git switch --orphan renewal-status
+          else
+            exit 1
+          fi
+
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > last-successful-check.txt
+          git add -- last-successful-check.txt
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'Record successful certificate check'
+          git push origin "HEAD:$ref"

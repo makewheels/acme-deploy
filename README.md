@@ -25,7 +25,7 @@ cp .env.example .env   # 填入真实值
 uv run python handler.py
 ```
 
-建议先设 `LE_STAGING=1` 测试：staging 模式走 LE 测试 CA，只签发、不部署，不会污染正式证书。
+建议先设 `LE_STAGING=1` 测试：staging 模式走 LE 测试 CA，只签发、不部署。请使用独立的 `STATE_DIR` 或 `STATE_OSS_URI`，以免覆盖正式续签状态。
 
 ## 配置
 
@@ -40,9 +40,19 @@ uv run python handler.py
 | `OSS_BUCKET` | oss_cname ✓ | 目标 bucket |
 | `OSS_REGION` | | 不填则自动探测 |
 | `LE_STAGING` | | `1` = 使用 staging CA，只签发不部署 |
-| `RENEW_BEFORE_DAYS` | | 剩余天数低于该值才续期，默认 `30` |
+| `RENEW_BEFORE_DAYS` | | 剩余天数不超过该值时续期，默认 `30` |
 | `STATE_DIR` | | 状态目录，默认 `./state` |
 | `STATE_OSS_URI` | | 如 `oss://bucket/.acme-deploy-state/`，无状态环境下持久化状态 |
+
+## 在 GitHub Actions 运行
+
+默认分支上的工作流每天 UTC 03:37（北京时间 11:37）检查，也可在 Actions 页面手动触发。不需要续期时仍视为检查成功。
+
+1. 在 **Settings → Secrets and variables → Actions** 添加仓库 Secrets：`ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET`、`CERT_DOMAIN`、`LE_EMAIL`、`OSS_BUCKET`、`STATE_OSS_URI`。使用临时凭证时还需 `ALIBABA_CLOUD_SECURITY_TOKEN`；需要指定区域时可添加仓库变量 `OSS_REGION`。为续期凭证仅授予所需的 DNS 和 OSS 权限。
+2. 从云函数迁移时，沿用同一个 `STATE_OSS_URI`。首次手动运行前先暂停旧定时触发器，避免两个任务同时操作 DNS 和状态；如需回退，先停用 Actions 再恢复旧触发器。
+3. 每次成功检查都会把 UTC 时间提交到独立的 `renewal-status` 分支，不修改默认分支。失败或续期详情在 Actions 日志中查看；状态分支不含日志、域名或密钥。
+
+公开仓库 60 天无活动时，GitHub 可能自动禁用定时工作流；不要把状态分支的提交视为保证。若被禁用，可在 Actions 页面重新启用。
 
 ## 部署到阿里云函数计算（FC）
 
