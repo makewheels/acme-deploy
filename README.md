@@ -48,7 +48,7 @@ uv run python handler.py
 
 默认分支上的工作流每天 UTC 03:37（北京时间 11:37）检查，也可在 Actions 页面手动触发。不需要续期时仍视为检查成功。
 
-1. 在 **Settings → Secrets and variables → Actions** 添加仓库 Secrets：`ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET`、`CERT_DOMAIN`、`LE_EMAIL`、`OSS_BUCKET`、`STATE_OSS_URI`。使用临时凭证时还需 `ALIBABA_CLOUD_SECURITY_TOKEN`；需要指定区域时可添加仓库变量 `OSS_REGION`。为续期凭证仅授予所需的 DNS 和 OSS 权限。
+1. 给 GitHub Actions 配置阿里云 OIDC 身份提供商和 RAM 角色。将角色信任限制到本仓库的默认分支，只授予续期所需权限。在 **Settings → Secrets and variables → Actions** 添加仓库变量 `ALIYUN_ROLE_ARN`、`ALIYUN_OIDC_PROVIDER_ARN`，以及 Secrets `CERT_DOMAIN`、`LE_EMAIL`、`OSS_BUCKET`、`STATE_OSS_URI`。可选变量为 `OSS_REGION`、`RENEW_BEFORE_DAYS`。工作流通过 OIDC 获取临时凭证，无需保存 AccessKey。
 2. 从云函数迁移时，沿用同一个 `STATE_OSS_URI`。首次手动运行前先暂停旧定时触发器，避免两个任务同时操作 DNS 和状态；如需回退，先停用 Actions 再恢复旧触发器。
 3. 每次成功检查都会把 UTC 时间提交到独立的 `renewal-status` 分支，不修改默认分支。失败或续期详情在 Actions 日志中查看；状态分支不含日志、域名或密钥。
 
