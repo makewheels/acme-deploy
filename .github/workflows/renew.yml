@@ -13,11 +13,14 @@ concurrency:
 
 jobs:
   renew:
-    if: github.ref_name == github.event.repository.default_branch
+    if: >-
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      vars.ALIYUN_ROLE_ARN != '' && vars.ALIYUN_OIDC_PROVIDER_ARN != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -25,21 +28,29 @@ jobs:
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: false
+      - name: Get temporary Alibaba Cloud credentials
+        id: aliyun
+        uses: aliyun/configure-aliyun-credentials-action@1e5248c8d5d93a8781ac344a68e19a43341e79e6 # v1
+        with:
+          role-to-assume: ${{ vars.ALIYUN_ROLE_ARN }}
+          oidc-provider-arn: ${{ vars.ALIYUN_OIDC_PROVIDER_ARN }}
+          role-session-name: acme-renewal-${{ github.run_id }}
       - name: Check and renew certificate
         shell: bash
         env:
-          ALIBABA_CLOUD_ACCESS_KEY_ID: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
-          ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
-          ALIBABA_CLOUD_SECURITY_TOKEN: ${{ secrets.ALIBABA_CLOUD_SECURITY_TOKEN }}
+          ALIBABA_CLOUD_ACCESS_KEY_ID: ${{ steps.aliyun.outputs.aliyun-access-key-id }}
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${{ steps.aliyun.outputs.aliyun-access-key-secret }}
+          ALIBABA_CLOUD_SECURITY_TOKEN: ${{ steps.aliyun.outputs.aliyun-security-token }}
           CERT_DOMAIN: ${{ secrets.CERT_DOMAIN }}
           LE_EMAIL: ${{ secrets.LE_EMAIL }}
           OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
           OSS_REGION: ${{ vars.OSS_REGION }}
+          RENEW_BEFORE_DAYS: ${{ vars.RENEW_BEFORE_DAYS || '30' }}
           STATE_OSS_URI: ${{ secrets.STATE_OSS_URI }}
         run: |
-          for name in ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET CERT_DOMAIN LE_EMAIL OSS_BUCKET STATE_OSS_URI; do
+          for name in ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET ALIBABA_CLOUD_SECURITY_TOKEN CERT_DOMAIN LE_EMAIL OSS_BUCKET STATE_OSS_URI; do
             if [[ -z "${!name}" ]]; then
-              echo "::error::Missing Actions secret: $name"
+              echo "::error::Missing renewal configuration: $name"
               exit 1
             fi
           done
